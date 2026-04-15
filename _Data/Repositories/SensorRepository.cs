@@ -76,5 +76,13 @@ namespace RefactorHeatAlertPostGre.Data.Repositories
         {
             return await _context.Sensors.AnyAsync(s => s.SensorCode == sensorCode, cancellationToken);
         }
+
+        public async Task<List<Sensor>> GetActiveInternalSensorsAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.Sensors
+                .Where(s => s.IsActive && !s.IsExternal)
+                .OrderBy(s => s.DisplayName)
+                .ToListAsync(cancellationToken);
+        }
     }
 }

@@ -126,3 +126,4 @@ D:\Programming\Projects\RefactorHeatAlertPostGre\obj\Debug\net10.0\refint\Refact
 D:\Programming\Projects\RefactorHeatAlertPostGre\obj\Debug\net10.0\RefactorHeatAlertPostGre.pdb
 D:\Programming\Projects\RefactorHeatAlertPostGre\obj\Debug\net10.0\RefactorHeatAlertPostGre.genruntimeconfig.cache
 D:\Programming\Projects\RefactorHeatAlertPostGre\obj\Debug\net10.0\ref\RefactorHeatAlertPostGre.dll
+D:\Programming\Projects\RefactorHeatAlertPostGre\obj\Debug\net10.0\RefactorHeatAlertPostGre.sourcelink.json

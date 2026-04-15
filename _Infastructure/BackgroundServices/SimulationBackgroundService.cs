@@ -53,6 +53,14 @@ namespace RefactorHeatAlertPostGre.Infrastructure.BackgroundServices
             var simulationService = scope.ServiceProvider.GetRequiredService<ISimulationService>();
 
             var sensors = await sensorRepository.GetAllActiveAsync(cancellationToken);
+            sensors = sensors.Where(s => !s.IsExternal).ToList();   // 🚫 Skip external sensors
+
+            if (sensors.Count == 0)
+            {
+                _logger.LogDebug("No active internal sensors to simulate");
+                return;
+            }
+
             if (sensors.Count == 0)
             {
                 _logger.LogDebug("No active sensors to simulate");

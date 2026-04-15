@@ -18,5 +18,7 @@ namespace RefactorHeatAlertPostGre.Models.Entities
 
         // Navigation property
         public virtual ICollection<HeatLog> HeatLogs { get; set; } = new List<HeatLog>();
+
+        public bool IsExternal { get; set; } = false; // New property
     }
 }

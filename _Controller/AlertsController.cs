@@ -163,7 +163,8 @@ namespace RefactorHeatAlertPostGre.Controllers
                     DisplayName = "Talisay City College (Wokwi)",
                     Barangay = "Poblacion",
                     Latitude = 10.2429329M, Longitude = 123.848309M, // Wokwi doesn't provide GPS, so use placeholders
-                    IsActive = true
+                    IsActive = true,
+                    IsExternal = true
                 };
                 sensor = await _sensorRepository.CreateAsync(sensor);
             }
