@@ -26,11 +26,11 @@ builder.Services.AddHeatAlertServices(builder.Configuration);
 var app = builder.Build();
 
 // Configure pipeline
-if (app.Environment.IsDevelopment())
-{
+// if (app.Environment.IsDevelopment())
+// {
     app.UseSwagger();
     app.UseSwaggerUI();
-}
+// 
 
 app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");
