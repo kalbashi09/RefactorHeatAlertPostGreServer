@@ -61,7 +61,12 @@ namespace RefactorHeatAlertPostGre.Services
             }
 
             var message = FormatHeartbeatMessage(alarmingSpots);
-            await _notificationService.BroadcastAlertAsync(message, cancellationToken);
+
+            // ✅ Add the web app URL for the radar button
+            string webAppUrl = "https://heatsync-zs03.onrender.com/mapUI.html";
+
+            // ✅ Use the keyboard broadcast method
+            await _notificationService.BroadcastAlertWithKeyboardAsync(message, webAppUrl, cancellationToken);
 
             _logger.LogInformation("Heartbeat broadcasted with {Count} alarming locations", alarmingSpots.Count);
         }
