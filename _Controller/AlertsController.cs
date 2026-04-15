@@ -138,5 +138,47 @@ namespace RefactorHeatAlertPostGre.Controllers
             if (delta.TotalHours < 24) return $"{(int)delta.TotalHours}h ago";
             return time.ToString("MMM dd");
         }
+
+        // In AlertsController.cs
+
+        [HttpPost("wokwi-reading")]
+        public async Task<IActionResult> ReceiveWokwiReading([FromBody] WokwiReadingDto reading)
+        {
+            if (reading == null)
+                return BadRequest("Invalid data received.");
+
+            // Log the received data (great for debugging)
+            _logger.LogInformation($"Received from Wokwi - Temp: {reading.Temperature}°C, Hum: {reading.Humidity}%");
+
+            // --- HERE IS THE MAGIC ---
+            // We need to connect this reading to a sensor in your system.
+            // Option A: Create a new sensor or find an existing one.
+            var sensor = await _sensorRepository.GetByCodeAsync("WOKWI-VIRTUAL-01");
+            if (sensor == null)
+            {
+                // You could create a placeholder sensor the first time data arrives.
+                sensor = new Sensor
+                {
+                    SensorCode = "WOKWI-VIRTUAL-01",
+                    DisplayName = "Talisay City College (Wokwi)",
+                    Barangay = "Poblacion",
+                    Latitude = 10.2429329M, Longitude = 123.848309M, // Wokwi doesn't provide GPS, so use placeholders
+                    IsActive = true
+                };
+                sensor = await _sensorRepository.CreateAsync(sensor);
+            }
+
+            // Now, use your existing IAlertService to process this reading!
+            // The heat index calculation will automatically use the temperature.
+            var alertResult = await _alertService.ProcessHeatReadingAsync(sensor, (int)reading.Temperature);
+            
+            // Optionally, you could also broadcast humidity via Telegram or just log it.
+            // ...
+
+            // Return a success response to the Wokwi ESP32
+            return Ok(new { message = "Sensor reading processed successfully." });
+        }
     }
+
+
 }
