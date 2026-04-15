@@ -62,43 +62,60 @@ namespace RefactorHeatAlertPostGre.Infrastructure.BackgroundServices
             var batchResults = new List<AlertResult>();
 
             foreach (var sensor in sensors)
+                    {
+                        // Check for manual override session
+                        if (SimulationService.TryGetManualSession(sensor.Id, out var session))
+                        {
+                            var heatIndex = session.FixedHeatIndex;
+                            var result = simulationService.CreateAlertResult(sensor, heatIndex);
+                            
+                            await heatLogRepository.CreateAsync(new HeatLog
+                            {
+                                SensorId = sensor.Id,
+                                RecordedTemp = heatIndex,
+                                HeatIndex = heatIndex,
+                                RecordedAt = DateTime.UtcNow
+                            }, cancellationToken);
+
+                            batchResults.Add(result);
+
+                            SimulationService.DecrementManualSession(sensor.Id);
+                            if (session.RemainingCycles <= 1)
+                            {
+                                _logger.LogInformation("Manual session expired for sensor {Code}", sensor.SensorCode);
+                            }
+                        }
+                        else
+                        {
+                            // Normal simulation
+                            var heatIndex = simulationService.GenerateReading(sensor);
+                            var result = await alertService.ProcessHeatReadingAsync(sensor, heatIndex, cancellationToken);
+                            batchResults.Add(result);
+                        }
+
+                        _logger.LogDebug("[{Sensor}] {HeatIndex}°C in {Barangay}", 
+                            sensor.DisplayName, batchResults.Last().HeatIndex, sensor.Barangay);
+                    }
+
+            await alertService.BroadcastHeartbeatSummaryAsync(batchResults, cancellationToken);
+
+            // --- NEW: Cleanup old logs if we exceed the cap ---
+            try
             {
-                // Check for manual override session
-                if (SimulationService.TryGetManualSession(sensor.Id, out var session))
+                var totalLogs = await heatLogRepository.GetCountAsync(cancellationToken);
+                if (totalLogs > 1000) // Keep the last 1000 logs (adjust as needed)
                 {
-                    var heatIndex = session.FixedHeatIndex;
-                    var result = simulationService.CreateAlertResult(sensor, heatIndex);
-                    
-                    await heatLogRepository.CreateAsync(new HeatLog
+                    var deleted = await heatLogRepository.PruneOldLogsAsync(1000, cancellationToken);
+                    if (deleted > 0)
                     {
-                        SensorId = sensor.Id,
-                        RecordedTemp = heatIndex,
-                        HeatIndex = heatIndex,
-                        RecordedAt = DateTime.UtcNow
-                    }, cancellationToken);
-
-                    batchResults.Add(result);
-
-                    SimulationService.DecrementManualSession(sensor.Id);
-                    if (session.RemainingCycles <= 1)
-                    {
-                        _logger.LogInformation("Manual session expired for sensor {Code}", sensor.SensorCode);
+                        _logger.LogInformation("🧹 Pruned {Count} old heat logs (kept latest 1000)", deleted);
                     }
                 }
-                else
-                {
-                    // Normal simulation
-                    var heatIndex = simulationService.GenerateReading(sensor);
-                    var result = await alertService.ProcessHeatReadingAsync(sensor, heatIndex, cancellationToken);
-                    batchResults.Add(result);
-                }
-
-                _logger.LogDebug("[{Sensor}] {HeatIndex}°C in {Barangay}", 
-                    sensor.DisplayName, batchResults.Last().HeatIndex, sensor.Barangay);
             }
-
-            // Broadcast heartbeat summary for all alarming locations
-            await alertService.BroadcastHeartbeatSummaryAsync(batchResults, cancellationToken);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Log pruning failed");
+            }
         }
     }
 }

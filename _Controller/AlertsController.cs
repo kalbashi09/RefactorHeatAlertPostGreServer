@@ -62,7 +62,7 @@ namespace RefactorHeatAlertPostGre.Controllers
         /// </summary>
         [HttpGet("history")]
         public async Task<ActionResult<ApiResponse<HeatHistoryResponse>>> GetHistory(
-            [FromQuery] int limit = 100, 
+            [FromQuery] int limit = 300, 
             [FromQuery] int offset = 0)
         {
             var logs = await _heatLogRepository.GetHistoryAsync(limit, offset);
