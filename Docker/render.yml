@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: heatalert-backend
+    runtime: docker
+    repo: https://github.com/yourusername/RefactorHeatAlertPostGre
+    branch: main
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: NEON_DATABASE_URL
+        sync: false
+      - key: BotSettings__TelegramToken
+        sync: false
+      - key: ApiSettings__ApiKey
+        sync: false
+      - key: RENDER_PING_URL
+        value: https://heatalert28-backend.onrender.com
