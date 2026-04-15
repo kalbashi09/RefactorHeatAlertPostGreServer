@@ -17,7 +17,7 @@ namespace RefactorHeatAlertPostGre.Infrastructure.BackgroundServices
             
             // Get from environment or config (default to your Render backend URL)
             _pingUrl = Environment.GetEnvironmentVariable("RENDER_PING_URL") 
-                       ?? "https://backend-9lv5.onrender.com/";
+                       ?? "https://refactorheatalertpostgreserver.onrender.com/";
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
