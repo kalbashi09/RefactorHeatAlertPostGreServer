@@ -12,6 +12,9 @@ RUN dotnet restore "RefactorHeatAlertPostGre.csproj"
 COPY . .
 RUN dotnet publish "RefactorHeatAlertPostGre.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
+# ============================================
+# STAGE 2: Create the runtime image
+# ============================================
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 EXPOSE 80
@@ -23,8 +26,8 @@ RUN apt-get update && apt-get install -y tzdata && \
     dpkg-reconfigure -f noninteractive tzdata && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user for security
-RUN adduser --disabled-password --gecos "" appuser && \
+# Create non-root user for security (fixed: use useradd)
+RUN useradd -m -s /bin/bash appuser && \
     mkdir -p /app/sharedresource && \
     chown -R appuser:appuser /app
 
