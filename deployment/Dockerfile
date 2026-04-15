@@ -12,9 +12,6 @@ RUN dotnet restore "RefactorHeatAlertPostGre.csproj"
 COPY . .
 RUN dotnet publish "RefactorHeatAlertPostGre.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
-# ============================================
-# STAGE 2: Create the runtime image
-# ============================================
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 EXPOSE 80
