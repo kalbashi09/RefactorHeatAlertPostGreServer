@@ -36,7 +36,7 @@ app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");
 
 // Optional: global API key middleware (can be used instead of attribute checks)
-// app.UseMiddleware<ApiKeyMiddleware>();
+app.UseMiddleware<ApiKeyMiddleware>();
 
 app.UseAuthorization();
 app.MapControllers();

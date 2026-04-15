@@ -11,13 +11,6 @@ namespace RefactorHeatAlertPostGre.Infrastructure.Middleware
         private readonly string _apiKey;
         private readonly string _apiKeyHeader = "X-API-KEY";
 
-        // Paths that require API key (you can also use attributes)
-        private readonly string[] _protectedPaths = new[]
-        {
-            "/api/alerts/report",
-            "/api/sensors/patch"  // partial example
-        };
-
         public ApiKeyMiddleware(RequestDelegate next, IConfiguration configuration, ILogger<ApiKeyMiddleware> logger)
         {
             _next = next;
@@ -29,8 +22,8 @@ namespace RefactorHeatAlertPostGre.Infrastructure.Middleware
 
         public async Task InvokeAsync(HttpContext context)
         {
-            // Check if the request path requires API key
-            if (RequiresApiKey(context.Request.Path))
+            // Check if the request requires API key validation
+            if (RequiresApiKey(context))
             {
                 if (!context.Request.Headers.TryGetValue(_apiKeyHeader, out var extractedKey))
                 {
@@ -52,13 +45,32 @@ namespace RefactorHeatAlertPostGre.Infrastructure.Middleware
             await _next(context);
         }
 
-        private bool RequiresApiKey(PathString path)
+        private bool RequiresApiKey(HttpContext context)
         {
-            // Simple check: any POST/PATCH to protected routes
-            // You can customize this logic
-            return path.StartsWithSegments("/api/alerts/report") ||
-                   path.StartsWithSegments("/api/sensors") && 
-                   (path.Value?.Contains("patch", StringComparison.OrdinalIgnoreCase) ?? false);
+            var path = context.Request.Path;
+            var method = context.Request.Method;
+
+            // Protect write operations on sensors
+            if (path.StartsWithSegments("/api/sensors"))
+            {
+                return method == HttpMethods.Post ||
+                       method == HttpMethods.Patch ||
+                       method == HttpMethods.Delete;
+            }
+
+            // Protect the manual heat report endpoint
+            if (path.StartsWithSegments("/api/alerts/report"))
+            {
+                return method == HttpMethods.Post;
+            }
+
+            // Protect subscriber management (optional)
+            if (path.StartsWithSegments("/api/subscribers"))
+            {
+                return method == HttpMethods.Post || method == HttpMethods.Delete;
+            }
+
+            return false;
         }
     }
 }
