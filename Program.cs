@@ -18,7 +18,8 @@ builder.Services.AddCors(options =>
             "https://heatsync-zs03.onrender.com", 
             "http://localhost:3000", 
             "capacitor://localhost",              
-            "http://localhost",                   
+            "http://localhost",
+            "https://localhost",                   
             "ionic://localhost")
               .AllowAnyMethod()
               .AllowAnyHeader();
@@ -37,7 +38,7 @@ var app = builder.Build();
     app.UseSwaggerUI();
 // 
 
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");
 
 // Optional: global API key middleware (can be used instead of attribute checks)
