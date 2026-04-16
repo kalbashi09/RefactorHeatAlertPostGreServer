@@ -147,36 +147,30 @@ namespace RefactorHeatAlertPostGre.Controllers
             if (reading == null)
                 return BadRequest("Invalid data received.");
 
-            // Log the received data (great for debugging)
-            _logger.LogInformation($"Received from Wokwi - Temp: {reading.Temperature}°C, Hum: {reading.Humidity}%");
+            // Determine sensor code (use provided or fallback to default)
+            string sensorCode = string.IsNullOrWhiteSpace(reading.SensorCode) 
+                ? "WOKWI-VIRTUAL-01" 
+                : reading.SensorCode;
 
-            // --- HERE IS THE MAGIC ---
-            // We need to connect this reading to a sensor in your system.
-            // Option A: Create a new sensor or find an existing one.
-            var sensor = await _sensorRepository.GetByCodeAsync("WOKWI-VIRTUAL-01");
+            _logger.LogInformation($"Received from {sensorCode} - Temp: {reading.Temperature}°C, Hum: {reading.Humidity}%");
+
+            var sensor = await _sensorRepository.GetByCodeAsync(sensorCode);
             if (sensor == null)
             {
-                // You could create a placeholder sensor the first time data arrives.
                 sensor = new Sensor
                 {
-                    SensorCode = "WOKWI-VIRTUAL-01",
-                    DisplayName = "Talisay City College (Wokwi)",
-                    Barangay = "Poblacion",
-                    Latitude = 10.2429329M, Longitude = 123.848309M, // Wokwi doesn't provide GPS, so use placeholders
+                    SensorCode = sensorCode,
+                    DisplayName = $"{sensorCode} (Wokwi)",
+                    Barangay = "Virtual Lab",
+                    Latitude = 0, Longitude = 0,
                     IsActive = true,
                     IsExternal = true
                 };
                 sensor = await _sensorRepository.CreateAsync(sensor);
+                _logger.LogInformation($"Created new external sensor: {sensorCode}");
             }
 
-            // Now, use your existing IAlertService to process this reading!
-            // The heat index calculation will automatically use the temperature.
-            var alertResult = await _alertService.ProcessHeatReadingAsync(sensor, (int)reading.Temperature);
-            
-            // Optionally, you could also broadcast humidity via Telegram or just log it.
-            // ...
-
-            // Return a success response to the Wokwi ESP32
+            await _alertService.ProcessHeatReadingAsync(sensor, (int)reading.Temperature);
             return Ok(new { message = "Sensor reading processed successfully." });
         }
     }
