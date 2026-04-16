@@ -2,7 +2,7 @@
 
 ## 1. Overview
 
-**HeatAlert** is a real‑time heat index monitoring and alerting system for Talisay City, Cebu. It simulates heat readings from a network of static sensors (and temporary mobile sensors) and broadcasts alerts via a Telegram bot when dangerous heat levels are detected. A live web map and an admin dashboard provide visualisation and management.
+**HeatAlert** is a real‑time heat index monitoring and alerting system for Talisay City, Cebu. It collects temperature readings from a network of **static sensors**, **mobile Telegram‑based sensors**, and **external devices** (such as hardware sensors or virtual simulators like Wokwi). When dangerous heat levels are detected, alerts are broadcast via a Telegram bot. A live web map and an admin dashboard provide visualisation and management.
 
 This document describes the **fully refactored version** of the system, which replaces a monolithic, raw‑SQL spaghetti codebase with a clean, layered architecture built on **.NET 10**, **Entity Framework Core**, **PostgreSQL**, and **Telegram.Bot**. The refactoring introduces dependency injection, separation of concerns, automated background services, and a robust deployment setup for **Render** and **Neon**.
 
@@ -80,7 +80,7 @@ RefactorHeatAlertPostGre/
 │       └── ApiKeyMiddleware.cs
 ├── Models/                       # Domain models
 │   ├── Entities/
-│   │   ├── Sensor.cs
+│   │   ├── Sensor.cs             # Includes IsExternal flag
 │   │   ├── HeatLog.cs
 │   │   ├── Subscriber.cs
 │   │   ├── AdminUser.cs
@@ -89,6 +89,7 @@ RefactorHeatAlertPostGre/
 │   │   ├── SensorDto.cs
 │   │   ├── HeatLogDto.cs
 │   │   ├── AuthDto.cs
+│   │   ├── WokwiReadingDto.cs    # For external sensor data
 │   │   └── ApiResponse.cs
 │   └── Enums/
 │       └── DangerLevel.cs
@@ -178,14 +179,23 @@ The application supports the following environment variables (overriding `appset
 
 ### 5.2 Tables
 
-| Table Name        | Purpose                                |
-| ----------------- | -------------------------------------- |
-| `sensor_registry` | Static and mobile sensor metadata      |
-| `heat_logs`       | Time‑series heat index readings        |
-| `subscribers`     | Telegram chat IDs subscribed to alerts |
-| `auth_personnel`  | Admin user credentials (hashed)        |
+| Table Name        | Purpose                                      |
+| ----------------- | -------------------------------------------- |
+| `sensor_registry` | Static, mobile, and external sensor metadata |
+| `heat_logs`       | Time‑series heat index readings              |
+| `subscribers`     | Telegram chat IDs subscribed to alerts       |
+| `auth_personnel`  | Admin user credentials (hashed)              |
 
-### 5.3 Repositories
+### 5.3 Sensor Types (`IsExternal` Flag)
+
+The `Sensor` entity includes a boolean `IsExternal` property (default `false`). This flag distinguishes sensors that receive data from external sources (real hardware, virtual simulators) from those that are simulated internally.
+
+| Sensor Type                     | `IsExternal` | Data Source                               |
+| ------------------------------- | ------------ | ----------------------------------------- |
+| Internal static/mobile          | `false`      | `SimulationBackgroundService` (every 30s) |
+| External (Wokwi, real hardware) | `true`       | External device HTTP POST requests        |
+
+### 5.4 Repositories
 
 Each aggregate has a repository interface and implementation:
 
@@ -196,7 +206,7 @@ Each aggregate has a repository interface and implementation:
 
 These abstract database access and are registered as **scoped** services.
 
-### 5.4 Automatic Data Pruning
+### 5.5 Automatic Data Pruning
 
 - The `SimulationBackgroundService` calls `IHeatLogRepository.PruneOldLogsAsync(keepCount: 3000)` when the total log count exceeds **3500**.
 - This keeps the database size small (≈ 3 MB for 3000 logs).
@@ -231,11 +241,192 @@ All business logic is encapsulated in services.
 - **`GetBarangay(latitude, longitude)`**: Determines which barangay a coordinate falls into using ray‑casting point‑in‑polygon algorithm.
 - **`IsValidCoordinate`**, **`CalculateDistance`**, **`GetAllBarangays`**.
 
+#### 🔍 Automatic Barangay Detection from GPS Coordinates
+
+The system includes a **geospatial auto‑fill capability** that assigns the correct barangay to any sensor when only latitude and longitude are provided. This is used both in the admin dashboard and during Telegram bot mobile sensor creation.
+
+**How It Works:**
+
+1. The `GeoService` singleton loads the GeoJSON boundary file (`talisaycitycebu.json`) once at startup and keeps it in memory.
+2. When a sensor is created or updated via the API, the controller checks if the `barangay` field is **empty, null, or the placeholder "string"**.
+3. If a barangay is missing, the controller calls `_geoService.GetBarangay(latitude, longitude)`.
+4. The service uses a **point‑in‑polygon ray‑casting algorithm** to test which barangay’s polygon contains the given coordinate.
+5. The detected barangay name is written back to the `Barangay` property and saved to the database.
+
+**Where It's Applied:**
+| Action | Auto‑Detection Trigger |
+|--------|------------------------|
+| Register new sensor (admin dashboard) | If `barangay` is empty or `"string"` |
+| Update sensor coordinates (admin dashboard) | If latitude/longitude change and no explicit `barangay` is provided |
+| Telegram mobile sensor location ping | Always (barangay is determined from the shared GPS location) |
+
+**Fallback:** If the coordinate lies outside all known barangay polygons, the method returns `"Outside of Talisay City"`.
+
 ### 6.5 `ITelegramBotService` (Singleton)
 
 - Wraps the `TelegramBotClient`.
 - Implements `IUpdateHandler` to process commands and location messages.
 - **Important**: Because it is a singleton, all scoped dependencies (repositories, `IAlertService`) are resolved **per‑handler** via `IServiceProvider.CreateScope()`.
+
+### 6.6 External Sensor Integration (Wokwi & Real Hardware)
+
+The system supports **external sensors**—devices or simulators that push temperature readings directly to the backend. These sensors are marked with `IsExternal = true` and are **excluded from the internal simulation engine**, ensuring that real data is never overwritten by simulated values.
+
+#### How It Works
+
+1. **Sensor Registration**: When an external sensor first sends data, it is automatically registered in the database with `IsExternal = true` (if not already present).
+2. **Data Ingestion**: A dedicated API endpoint (`POST /api/alerts/wokwi-reading`) accepts temperature and humidity readings in JSON format.
+3. **Simulation Exclusion**: The `SimulationBackgroundService` filters out any sensor with `IsExternal == true`, so the internal simulation never generates fake readings for external devices.
+
+#### API Endpoint: `POST /api/alerts/wokwi-reading`
+
+**Request Body:**
+
+```json
+{
+  "temperature": 34.5,
+  "humidity": 68.2
+}
+```
+
+**Implementation (in `AlertsController.cs`):**
+
+```csharp
+[HttpPost("wokwi-reading")]
+public async Task<IActionResult> ReceiveWokwiReading([FromBody] WokwiReadingDto reading)
+{
+    if (reading == null) return BadRequest();
+
+    // Find or create the external sensor
+    var sensor = await _sensorRepository.GetByCodeAsync("WOKWI-VIRTUAL-01");
+    if (sensor == null)
+    {
+        sensor = new Sensor
+        {
+            SensorCode = "WOKWI-VIRTUAL-01",
+            DisplayName = "Wokwi Virtual Sensor",
+            Barangay = "Virtual Lab",
+            Latitude = 0, Longitude = 0,
+            IsActive = true,
+            IsExternal = true   // ⭐ Marks it as external
+        };
+        sensor = await _sensorRepository.CreateAsync(sensor);
+    }
+
+    // Process the heat reading (saves to DB and broadcasts alerts if needed)
+    await _alertService.ProcessHeatReadingAsync(sensor, (int)reading.Temperature);
+    return Ok(new { message = "Reading processed" });
+}
+```
+
+#### Filtering External Sensors in Simulation
+
+In `SimulationBackgroundService.cs`:
+
+```csharp
+var sensors = await sensorRepository.GetAllActiveAsync(cancellationToken);
+sensors = sensors.Where(s => !s.IsExternal).ToList();   // Exclude external sensors
+```
+
+#### Wokwi Virtual Sensor Setup
+
+**What is Wokwi?**  
+[Wokwi](https://wokwi.com) is an online simulator for Arduino, ESP32, and other microcontrollers. It allows you to prototype IoT devices entirely in the browser, including WiFi connectivity and virtual sensors like the DHT22.
+
+**Firmware for ESP32 with DHT22 (Original Version – Real Sensor Readings)**
+
+The following Arduino sketch runs on a virtual ESP32 in Wokwi. It reads the **simulated DHT22 sensor values** (which are generated by Wokwi's physics engine) and sends them to your HeatAlert backend every 10 seconds.
+
+```cpp
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <DHT.h>
+
+// --- WiFi Configuration ---
+const char* ssid = "Wokwi-GUEST"; // Wokwi's built-in virtual network
+const char* password = "";        // No password required
+
+// --- Server Configuration ---
+const char* serverUrl = "https://refactorheatalertpostgreserver.onrender.com/api/alerts/wokwi-reading";
+
+// --- Sensor Configuration ---
+#define DHTPIN 15          // The pin your DHT22 is connected to
+#define DHTTYPE DHT22
+DHT dht(DHTPIN, DHTTYPE);
+
+void setup() {
+  Serial.begin(115200);
+  dht.begin();
+
+  // Connect to WiFi
+  WiFi.begin(ssid, password);
+  Serial.print("Connecting to WiFi");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\nWiFi connected!");
+}
+
+void loop() {
+  // Read sensor data from the virtual DHT22
+  float temperature = dht.readTemperature();
+  float humidity = dht.readHumidity();
+
+  // Check if readings are valid
+  if (isnan(temperature) || isnan(humidity)) {
+    Serial.println("Failed to read from DHT sensor!");
+    delay(2000);
+    return;
+  }
+
+  // Only send data if connected to WiFi
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    http.begin(serverUrl);
+    http.addHeader("Content-Type", "application/json");
+
+    // Create JSON payload
+    String payload = "{\"temperature\":" + String(temperature) +
+                     ",\"humidity\":" + String(humidity) + "}";
+
+    // Send HTTP POST request
+    int httpResponseCode = http.POST(payload);
+
+    if (httpResponseCode > 0) {
+      Serial.print("Data sent, response code: ");
+      Serial.println(httpResponseCode);
+    } else {
+      Serial.print("Error sending data: ");
+      Serial.println(http.errorToString(httpResponseCode).c_str());
+    }
+    http.end(); // Close connection
+  } else {
+    Serial.println("WiFi Disconnected");
+  }
+
+  delay(10000); // Send data every 10 seconds
+}
+```
+
+**Setting Up Wokwi**
+
+1. Go to [Wokwi.com](https://wokwi.com) and create a new **ESP32** project.
+2. In the `diagram.json` tab, add a **DHT22** sensor and connect it to pin 15 (or change the `DHTPIN` accordingly).
+3. Paste the above code into the `sketch.ino` tab.
+4. Run the simulation – the virtual ESP32 will connect to the internet and start POSTing data to your backend.
+
+**Local Development with Wokwi Private Gateway**  
+When the backend is running on `localhost`, the Wokwi simulation cannot reach it directly. Use the **Wokwi Private Gateway**:
+
+1. Download the `wokwigw` tool from [GitHub](https://github.com/wokwi/wokwigw/releases).
+2. Run the executable on your computer.
+3. In the Wokwi editor, press `F1` → **"Enable Private Wokwi IoT Gateway"**.
+4. Change the `serverUrl` in the sketch to `http://host.wokwi.internal:5083/api/alerts/wokwi-reading`.
+
+#### Real Hardware Sensors
+
+The same pattern applies to any physical IoT device (Arduino, ESP32, Raspberry Pi) with a DHT22 or other temperature sensor. Simply point the device to the same `/api/alerts/wokwi-reading` endpoint (or create a new endpoint for each device). Set `IsExternal = true` for those sensors to prevent simulation override.
 
 ---
 
@@ -246,7 +437,7 @@ Two hosted services run continuously.
 ### 7.1 `SimulationBackgroundService`
 
 - Executes every **30 seconds**.
-- Retrieves all active sensors.
+- Retrieves all active sensors **with `IsExternal == false`**.
 - For each sensor, generates a reading (or uses manual override if active).
 - Saves logs and triggers alerts.
 - Broadcasts heartbeat summary.
@@ -274,12 +465,13 @@ All endpoints are prefixed with `/api`. Responses are wrapped in a standard `Api
 
 ### 8.1 Public Endpoints (No API Key)
 
-| Method | Endpoint                                 | Description                                  |
-| ------ | ---------------------------------------- | -------------------------------------------- |
-| `GET`  | `/api/health`                            | Health check (returns DB connection status)  |
-| `GET`  | `/api/alerts/current`                    | Latest heat reading                          |
-| `GET`  | `/api/alerts/history?limit=100&offset=0` | Paginated heat history (with sensor details) |
-| `POST` | `/api/auth/login`                        | Admin login (`personnelId`, `passcode`)      |
+| Method | Endpoint                                 | Description                                        |
+| ------ | ---------------------------------------- | -------------------------------------------------- |
+| `GET`  | `/api/health`                            | Health check (returns DB connection status)        |
+| `GET`  | `/api/alerts/current`                    | Latest heat reading                                |
+| `GET`  | `/api/alerts/history?limit=100&offset=0` | Paginated heat history (with sensor details)       |
+| `POST` | `/api/alerts/wokwi-reading`              | Receive temperature/humidity from external sensors |
+| `POST` | `/api/auth/login`                        | Admin login (`personnelId`, `passcode`)            |
 
 ### 8.2 Protected Endpoints (Require `X-API-KEY` header)
 
@@ -296,7 +488,7 @@ All endpoints are prefixed with `/api`. Responses are wrapped in a standard `Api
 | `POST`   | `/api/subscribers`                  | Add a subscriber (Telegram chat ID)                |
 | `DELETE` | `/api/subscribers/{chatId}`         | Unsubscribe                                        |
 
-> **Note**: The API key is validated in `AlertsController.ReportHeat` and `SensorsController` write operations. A global middleware (`ApiKeyMiddleware`) is available but not enabled by default.
+> **Note**: The API key is validated via the `ApiKeyMiddleware` for all write operations.
 
 ---
 
@@ -405,17 +597,18 @@ const HEALERTSYS_CONFIG = {
 
 ### 13.2 Common Issues
 
-| Symptom                            | Likely Cause                              | Solution                                                                                    |
-| ---------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Telegram bot not responding        | Bot token invalid or bot not started      | Check `BotSettings:TelegramToken` and that `TelegramBotService.StartReceiving()` is called. |
-| CORS errors in browser             | Frontend origin not allowed               | Update CORS policy in `Program.cs`.                                                         |
-| Database connection failure        | Wrong connection string or Neon suspended | Verify `NEON_DATABASE_URL`; ping the database URL to wake it.                               |
-| “HOTTEST NOW” badge missing        | Time parsing fails                        | Ensure `recordedAt` is present; use frontend fix with `toPHTime()`.                         |
-| Manual simulation not broadcasting | Override not set correctly                | Check `SimulationService.SetManualOverride` call in `TelegramBotService`.                   |
+| Symptom                                  | Likely Cause                              | Solution                                                                                    |
+| ---------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Telegram bot not responding              | Bot token invalid or bot not started      | Check `BotSettings:TelegramToken` and that `TelegramBotService.StartReceiving()` is called. |
+| CORS errors in browser                   | Frontend origin not allowed               | Update CORS policy in `Program.cs`.                                                         |
+| Database connection failure              | Wrong connection string or Neon suspended | Verify `NEON_DATABASE_URL`; ping the database URL to wake it.                               |
+| “HOTTEST NOW” badge missing              | Time parsing fails                        | Ensure `recordedAt` is present; use frontend fix with `toPHTime()`.                         |
+| Manual simulation not broadcasting       | Override not set correctly                | Check `SimulationService.SetManualOverride` call in `TelegramBotService`.                   |
+| External sensor overridden by simulation | `IsExternal` flag not set                 | Ensure sensor is created with `IsExternal = true`.                                          |
 
 ### 13.3 Adding New Sensors
 
-Use the admin dashboard **Register New Sensor** form. The backend will automatically determine the barangay from coordinates if not provided.
+Use the admin dashboard **Register New Sensor** form. The backend will automatically determine the barangay from coordinates if not provided. For external sensors, ensure `IsExternal` is set to `true`.
 
 ### 13.4 Updating the GeoJSON Boundary
 
@@ -429,6 +622,7 @@ Replace `sharedresource/talisaycitycebu.json` and restart the application. The `
 - **Real‑time WebSocket updates** for the map (instead of polling).
 - **Historical analytics** – charts of heat trends per barangay.
 - **Multi‑city support** – load multiple GeoJSON files dynamically.
+- **Support for multiple external sensor types** with unique identifiers.
 
 ---
 
@@ -440,5 +634,6 @@ The refactored HeatAlert system is now:
 - **Scalable** – can easily add new sensors or extend functionality.
 - **Cloud‑ready** – runs on Render + Neon with automatic keep‑alive.
 - **Developer‑friendly** – well‑structured codebase with comprehensive logging.
+- **Extensible** – supports both internal simulation and external hardware/virtual sensors.
 
-This documentation should serve as the definitive reference for understanding, deploying, and extending the application.
+This documentation serves as the definitive reference for understanding, deploying, and extending the application.
