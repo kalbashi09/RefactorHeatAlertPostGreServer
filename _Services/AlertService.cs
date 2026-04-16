@@ -36,13 +36,13 @@ namespace RefactorHeatAlertPostGre.Services
             await SaveHeatLogAsync(result, sensor.Id, cancellationToken);
 
             // Only broadcast if it meets alert threshold
-            if (ShouldSendAlert(heatIndex))
-            {
-                var message = FormatAlertMessage(result);
-                await _notificationService.BroadcastAlertAsync(message, cancellationToken);
-                _logger.LogInformation("Alert broadcasted: {SensorCode} at {HeatIndex}°C", 
-                    sensor.SensorCode, heatIndex);
-            }
+            // if (ShouldSendAlert(heatIndex))
+            // {
+            //     var message = FormatAlertMessage(result);
+            //     await _notificationService.BroadcastAlertAsync(message, cancellationToken);
+            //     _logger.LogInformation("Alert broadcasted: {SensorCode} at {HeatIndex}°C", 
+            //         sensor.SensorCode, heatIndex);
+            // }
 
             return result;
         }
