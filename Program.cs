@@ -14,7 +14,12 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("https://heatsync-zs03.onrender.com", "http://localhost:3000")
+        policy.WithOrigins(
+            "https://heatsync-zs03.onrender.com", 
+            "http://localhost:3000", 
+            "capacitor://localhost",              
+            "http://localhost",                   
+            "ionic://localhost")
               .AllowAnyMethod()
               .AllowAnyHeader();
     });
