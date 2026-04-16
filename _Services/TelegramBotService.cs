@@ -367,7 +367,7 @@ namespace RefactorHeatAlertPostGre.Services
             // Determine target heat index
             int targetHeat = command switch
             {
-                "extreme" => 55,
+                "extreme" => 85,
                 "danger" => 46,
                 "caution" => 40,
                 "normal" => 31,
