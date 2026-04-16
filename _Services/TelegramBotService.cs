@@ -143,11 +143,11 @@ namespace RefactorHeatAlertPostGre.Services
         switch (text)
         {
             case "/start":
-            case "/subscribeservice":
+            case "/subscribe":
                 await HandleSubscribeAsync(botClient, chatId, username, cancellationToken);
                 break;
 
-            case "/unsubscribeservice":
+            case "/unsubscribe":
                 await HandleUnsubscribeAsync(botClient, chatId, cancellationToken);
                 break;
 
