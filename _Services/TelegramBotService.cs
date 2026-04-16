@@ -281,8 +281,8 @@ namespace RefactorHeatAlertPostGre.Services
                 "🤖 **HEATSYNC BOT COMMANDS**\n\n" +
                 "📋 *General*\n" +
                 "/start - Subscribe to alerts\n" +
-                "/subscribeservice - Subscribe to alerts\n" +
-                "/unsubscribeservice - Stop alerts\n" +
+                "/subscribe - Subscribe to alerts\n" +
+                "/unsubscribe - Stop alerts\n" +
                 "/status - View system status\n" +
                 "/help - Show this help\n\n" +
                 "🧪 *Testing (Simulation)*\n" +
