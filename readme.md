@@ -199,10 +199,10 @@ The `Sensor` entity includes a boolean `IsExternal` property (default `false`). 
 
 Each aggregate has a repository interface and implementation:
 
-- `ISensorRepository` / `SensorRepository`
-- `IHeatLogRepository` / `HeatLogRepository`
-- `ISubscriberRepository` / `SubscriberRepository`
-- `IAdminUserRepository` / `AdminUserRepository`
+- `ISensorRepository` / `SensorRepository` For `sensors_registry`
+- `IHeatLogRepository` / `HeatLogRepository` For `heat_logs`
+- `ISubscriberRepository` / `SubscriberRepository` For `subscribers`
+- `IAdminUserRepository` / `AdminUserRepository` For `auth_personnel`
 
 These abstract database access and are registered as **scoped** services.
 
