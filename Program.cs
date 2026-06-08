@@ -16,7 +16,8 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins(
             "https://heatsync-zs03.onrender.com", 
-            "http://localhost:3000", 
+            "http://localhost:5500",     
+            "http://127.0.0.1:5500", 
             "capacitor://localhost",              
             "http://localhost",
             "https://localhost",                   

@@ -2,7 +2,7 @@ services:
   - type: web
     name: heatalert-backend
     runtime: docker
-    repo: https://github.com/yourusername/RefactorHeatAlertPostGre
+    repo: https://github.com/kalbashi09/RefactorHeatAlertPostGre
     branch: main
     dockerfilePath: ./deployment/Dockerfile
     healthCheckPath: /api/health

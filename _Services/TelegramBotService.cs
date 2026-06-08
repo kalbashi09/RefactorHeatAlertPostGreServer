@@ -211,7 +211,7 @@ namespace RefactorHeatAlertPostGre.Services
                       "Commands:\n" +
                       "/status - Check current heat status\n" +
                       "/simulate danger - Simulate an alert (for testing)\n" +
-                      "/unsubscribeservice - Stop receiving alerts\n" +
+                      "/unsubscribe - Stop receiving alerts\n" +
                       "/help - Show all commands",
                 parseMode: ParseMode.Markdown,
                 cancellationToken: cancellationToken
@@ -228,7 +228,7 @@ namespace RefactorHeatAlertPostGre.Services
             var success = await subscriberRepository.UnsubscribeAsync(chatId, cancellationToken);
 
             var message = success
-                ? "🔕 **Alerts Muted**\n\nYou will no longer receive heat notifications.\nSend `/subscribeservice` anytime to re-enable them."
+                ? "🔕 **Alerts Muted**\n\nYou will no longer receive heat notifications.\nSend `/subscribe` anytime to re-enable them."
                 : "❌ You weren't subscribed.";
 
             await botClient.SendMessage(

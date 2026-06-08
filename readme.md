@@ -199,10 +199,10 @@ The `Sensor` entity includes a boolean `IsExternal` property (default `false`). 
 
 Each aggregate has a repository interface and implementation:
 
-- `ISensorRepository` / `SensorRepository` For `sensors_registry`
-- `IHeatLogRepository` / `HeatLogRepository` For `heat_logs`
-- `ISubscriberRepository` / `SubscriberRepository` For `subscribers`
-- `IAdminUserRepository` / `AdminUserRepository` For `auth_personnel`
+- `ISensorRepository` / `SensorRepository` – For `sensors_registry`
+- `IHeatLogRepository` / `HeatLogRepository` – For `heat_logs`
+- `ISubscriberRepository` / `SubscriberRepository` – For `subscribers`
+- `IAdminUserRepository` / `AdminUserRepository` – For `auth_personnel`
 
 These abstract database access and are registered as **scoped** services.
 
@@ -286,9 +286,11 @@ The system supports **external sensors**—devices or simulators that push tempe
 {
   "temperature": 34.5,
   "humidity": 68.2,
-  "sensorCode": "WOKWI-VIRTUAL-01" // optional, defaults to "WOKWI-VIRTUAL-01"
+  "sensorCode": "WOKWI-VIRTUAL-01"
 }
 ```
+
+The `sensorCode` field is **optional**. If omitted, the system defaults to `"WOKWI-VIRTUAL-01"`. Providing a unique code per sensor allows the system to manage an unlimited number of external devices.
 
 **Implementation (in `AlertsController.cs`):**
 
@@ -298,8 +300,8 @@ public async Task<IActionResult> ReceiveWokwiReading([FromBody] WokwiReadingDto 
 {
     if (reading == null) return BadRequest();
 
-    string sensorCode = string.IsNullOrWhiteSpace(reading.SensorCode)
-        ? "WOKWI-VIRTUAL-01"
+    string sensorCode = string.IsNullOrWhiteSpace(reading.SensorCode) 
+        ? "WOKWI-VIRTUAL-01" 
         : reading.SensorCode;
 
     var sensor = await _sensorRepository.GetByCodeAsync(sensorCode);
@@ -338,7 +340,7 @@ sensors = sensors.Where(s => !s.IsExternal).ToList();   // Exclude external sens
 
 **Firmware for ESP32 with DHT22**
 
-The following Arduino sketch runs on a virtual ESP32 in Wokwi. It reads the simulated DHT22 sensor values and sends them to your HeatAlert backend every 10 seconds.
+The following Arduino sketch runs on a virtual ESP32 in Wokwi. It reads the simulated DHT22 sensor values and sends them to your HeatAlert backend every 10 seconds. Change the `sensorCode` value in the JSON payload for each additional virtual sensor.
 
 ```cpp
 #include <WiFi.h>
@@ -347,7 +349,7 @@ The following Arduino sketch runs on a virtual ESP32 in Wokwi. It reads the simu
 
 const char* ssid = "Wokwi-GUEST";
 const char* password = "";
-const char* serverUrl = "https://refactorheatalertpostgreserver.onrender.com/api/alerts/wokwi-reading";
+const char* serverUrl = "http://host.wokwi.internal:5083/api/alerts/wokwi-reading";
 
 #define DHTPIN 15
 #define DHTTYPE DHT22
@@ -372,8 +374,8 @@ void loop() {
     HTTPClient http;
     http.begin(serverUrl);
     http.addHeader("Content-Type", "application/json");
-    String payload = "{\"temperature\":" + String(temperature) +
-                     ",\"humidity\":" + String(humidity) +
+    String payload = "{\"temperature\":" + String(temperature) + 
+                     ",\"humidity\":" + String(humidity) + 
                      ",\"sensorCode\":\"WOKWI-VIRTUAL-01\"}";
     http.POST(payload);
     http.end();
@@ -553,10 +555,11 @@ Replace `sharedresource/talisaycitycebu.json` and restart.
 
 ## 14. Roadmap / Future Enhancements
 
-- JWT Authentication
-- WebSocket real‑time updates
-- Historical analytics charts
-- Multi‑city GeoJSON support
+- **JWT Authentication** – Replace simple API key with token‑based auth.
+- **WebSocket Real‑time Updates** – Push live data to the map instead of polling.
+- **Historical Analytics Charts** – Visualize heat trends per barangay over time.
+- **Multi‑city GeoJSON Support** – Load multiple boundary files dynamically.
+- **AI‑powered Heat Forecasting** – Use ML.NET to predict heat index spikes based on historical data, enabling proactive warnings before dangerous conditions develop.
 
 ---
 

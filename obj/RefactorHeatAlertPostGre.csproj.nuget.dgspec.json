@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "/home/john/JD Files/Programming /C# Projects/RefactorHeatAlertPostGre/RefactorHeatAlertPostGre.csproj": {}
+    "/media/john/BackUPHDD/Programming /ToDefend/Heat/RefactorHeatAlertPostGre/RefactorHeatAlertPostGre.csproj": {}
   },
   "projects": {
-    "/home/john/JD Files/Programming /C# Projects/RefactorHeatAlertPostGre/RefactorHeatAlertPostGre.csproj": {
+    "/media/john/BackUPHDD/Programming /ToDefend/Heat/RefactorHeatAlertPostGre/RefactorHeatAlertPostGre.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/home/john/JD Files/Programming /C# Projects/RefactorHeatAlertPostGre/RefactorHeatAlertPostGre.csproj",
+        "projectUniqueName": "/media/john/BackUPHDD/Programming /ToDefend/Heat/RefactorHeatAlertPostGre/RefactorHeatAlertPostGre.csproj",
         "projectName": "RefactorHeatAlertPostGre",
-        "projectPath": "/home/john/JD Files/Programming /C# Projects/RefactorHeatAlertPostGre/RefactorHeatAlertPostGre.csproj",
+        "projectPath": "/media/john/BackUPHDD/Programming /ToDefend/Heat/RefactorHeatAlertPostGre/RefactorHeatAlertPostGre.csproj",
         "packagesPath": "/home/john/.nuget/packages/",
-        "outputPath": "/home/john/JD Files/Programming /C# Projects/RefactorHeatAlertPostGre/obj/",
+        "outputPath": "/media/john/BackUPHDD/Programming /ToDefend/Heat/RefactorHeatAlertPostGre/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/home/john/.nuget/NuGet/NuGet.Config"
