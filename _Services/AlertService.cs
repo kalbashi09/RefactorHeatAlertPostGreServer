@@ -49,9 +49,12 @@ namespace RefactorHeatAlertPostGre.Services
 
         public async Task BroadcastHeartbeatSummaryAsync(List<AlertResult> readings, CancellationToken cancellationToken = default)
         {
-            var alarmingSpots = readings
-                .Where(r => ShouldSendAlert(r.HeatIndex))
-                .OrderByDescending(r => r.HeatIndex)
+            // Fetch the latest reading for EVERY active sensor (internal + external)
+            var latestLogs = await _heatLogRepository.GetLatestPerSensorAsync(cancellationToken);
+
+            var alarmingSpots = latestLogs
+                .Where(l => ShouldSendAlert(l.HeatIndex))
+                .OrderByDescending(l => l.HeatIndex)
                 .ToList();
 
             if (!alarmingSpots.Any())
@@ -60,12 +63,10 @@ namespace RefactorHeatAlertPostGre.Services
                 return;
             }
 
+            // Build the message from HeatLog + its linked Sensor
             var message = FormatHeartbeatMessage(alarmingSpots);
 
-            // ✅ Add the web app URL for the radar button
             string webAppUrl = "https://heatsync-zs03.onrender.com/mapUI.html";
-
-            // ✅ Use the keyboard broadcast method
             await _notificationService.BroadcastAlertWithKeyboardAsync(message, webAppUrl, cancellationToken);
 
             _logger.LogInformation("Heartbeat broadcasted with {Count} alarming locations", alarmingSpots.Count);
@@ -106,6 +107,31 @@ namespace RefactorHeatAlertPostGre.Services
                    $"📍 Location: {result.RelativeLocation} ({result.BarangayName})\n" +
                    $"🔥 Heat Index: {result.HeatIndex}°C\n" +
                    $"⏰ Time: {result.CreatedAt:hh:mm tt}";
+        }
+
+        private string FormatHeartbeatMessage(List<HeatLog> alarmingLogs)
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("🌡️ ***HEATSYNC: HIGH HEAT REPORT***");
+            sb.AppendLine($"⏰ *Scanned at: {DateTime.Now:hh:mm tt}*");
+            sb.AppendLine("-----------------------------------");
+
+            var topLog = alarmingLogs.First();
+            sb.AppendLine($"🔝 **HIGHEST:** {topLog.HeatIndex}°C in {topLog.Sensor?.Barangay ?? "Unknown"}");
+            sb.AppendLine();
+
+            foreach (var log in alarmingLogs)
+            {
+                var level = _simulationService.GetDangerLevel(log.HeatIndex);
+                var emoji = level.GetEmoji();
+                sb.AppendLine($"{emoji} *{log.HeatIndex}°C* - {level.GetDisplayName()}");
+                sb.AppendLine($"📍 {log.Sensor?.DisplayName ?? "Unknown"} ({log.Sensor?.Barangay ?? "Unknown"})");
+                sb.AppendLine();
+            }
+
+            sb.AppendLine(" ✅ *Stay Hydrated, Avoid going out during peak heat hours.*");
+            sb.AppendLine("📍 *Tap the button below for the live interactive radar.*");
+            return sb.ToString();
         }
 
         private string FormatHeartbeatMessage(List<AlertResult> alarmingSpots)

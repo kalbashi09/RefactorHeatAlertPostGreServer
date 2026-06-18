@@ -19,6 +19,16 @@ namespace RefactorHeatAlertPostGre.Data.Repositories
             return heatLog;
         }
 
+        public async Task<List<HeatLog>> GetLatestPerSensorAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.HeatLogs
+                .Include(h => h.Sensor)
+                .Where(h => h.Sensor.IsActive)   // Only active sensors
+                .GroupBy(h => h.SensorId)
+                .Select(g => g.OrderByDescending(h => h.RecordedAt).First())
+                .ToListAsync(cancellationToken);
+        }
+
         public async Task<List<HeatLog>> GetHistoryAsync(int limit = 100, int offset = 0, CancellationToken cancellationToken = default)
         {
             return await _context.HeatLogs

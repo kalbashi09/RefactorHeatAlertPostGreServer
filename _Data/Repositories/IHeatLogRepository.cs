@@ -12,5 +12,6 @@ namespace RefactorHeatAlertPostGre.Data.Repositories
         Task<int> GetCountAsync(CancellationToken cancellationToken = default);
         Task<HeatLog?> GetLatestAsync(CancellationToken cancellationToken = default);
         Task<int> PruneOldLogsAsync(int keepCount = 300, CancellationToken cancellationToken = default);
+        Task<List<HeatLog>> GetLatestPerSensorAsync(CancellationToken cancellationToken = default);
     }
 }
