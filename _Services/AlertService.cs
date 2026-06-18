@@ -52,14 +52,16 @@ namespace RefactorHeatAlertPostGre.Services
             // Fetch the latest reading for EVERY active sensor (internal + external)
             var latestLogs = await _heatLogRepository.GetLatestPerSensorAsync(cancellationToken);
 
+            // Only include readings that are "fresh" (e.g., recorded within the last 5 minutes)
+            var freshnessThreshold = DateTime.UtcNow.AddMinutes(-5);
             var alarmingSpots = latestLogs
-                .Where(l => ShouldSendAlert(l.HeatIndex))
+                .Where(l => l.RecordedAt >= freshnessThreshold && ShouldSendAlert(l.HeatIndex))
                 .OrderByDescending(l => l.HeatIndex)
                 .ToList();
 
             if (!alarmingSpots.Any())
             {
-                _logger.LogDebug("No alarming spots in this cycle");
+                _logger.LogDebug("No fresh alarming spots in this cycle");
                 return;
             }
 
@@ -69,8 +71,9 @@ namespace RefactorHeatAlertPostGre.Services
             string webAppUrl = "https://heatsync-zs03.onrender.com/mapUI.html";
             await _notificationService.BroadcastAlertWithKeyboardAsync(message, webAppUrl, cancellationToken);
 
-            _logger.LogInformation("Heartbeat broadcasted with {Count} alarming locations", alarmingSpots.Count);
+            _logger.LogInformation("Heartbeat broadcasted with {Count} fresh alarming locations", alarmingSpots.Count);
         }
+
 
         public async Task SaveHeatLogAsync(AlertResult result, int sensorId, CancellationToken cancellationToken = default)
         {
