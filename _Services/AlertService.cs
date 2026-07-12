@@ -39,6 +39,10 @@ namespace RefactorHeatAlertPostGre.Services
             // if (ShouldSendAlert(heatIndex))
             // {
             //     var message = FormatAlertMessage(result);
+            //     if (sensor.IsExternal)
+            //     {
+            //         message += "\n🌐 Source: Wokwi Virtual Device";
+            //     }
             //     await _notificationService.BroadcastAlertAsync(message, cancellationToken);
             //     _logger.LogInformation("Alert broadcasted: {SensorCode} at {HeatIndex}°C", 
             //         sensor.SensorCode, heatIndex);
@@ -104,6 +108,7 @@ namespace RefactorHeatAlertPostGre.Services
 
             return $"{emoji} *HEAT ALERT: {level.GetDisplayName()}*\n\n" +
                    $"📍 Location: {result.RelativeLocation} ({result.BarangayName})\n" +
+                   $"🆔 Sensor: {result.SensorCode}\n" +
                    $"🔥 Heat Index: {result.HeatIndex}°C\n" +
                    $"⏰ Time: {result.CreatedAt:hh:mm tt}";
         }
@@ -126,6 +131,10 @@ namespace RefactorHeatAlertPostGre.Services
                 
                 sb.AppendLine($"{emoji} *{spot.HeatIndex}°C* - {level.GetDisplayName()}");
                 sb.AppendLine($"📍 {spot.DisplayName} ({spot.BarangayName})");
+                if (spot.DisplayName.Contains("(Wokwi)"))
+                {
+                    sb.AppendLine("🌐 Source: Wokwi Virtual Device");
+                }
                 sb.AppendLine();
             }
             sb.AppendLine(" ✅ *Stay Hydrated, Avoid going out during peak heat hours.*");

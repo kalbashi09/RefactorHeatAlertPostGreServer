@@ -53,7 +53,6 @@ namespace RefactorHeatAlertPostGre.Infrastructure.BackgroundServices
             var simulationService = scope.ServiceProvider.GetRequiredService<ISimulationService>();
 
             var sensors = await sensorRepository.GetAllActiveAsync(cancellationToken);
-            sensors = sensors.Where(s => !s.IsExternal).ToList();   // 🚫 Skip external sensors
 
             if (sensors.Count == 0)
             {
@@ -70,42 +69,58 @@ namespace RefactorHeatAlertPostGre.Infrastructure.BackgroundServices
             var batchResults = new List<AlertResult>();
 
             foreach (var sensor in sensors)
+            {
+                if (sensor.IsExternal)
+                {
+                    // External sensors: Use latest actual reading from DB
+                    var latestLogs = await heatLogRepository.GetHistoryBySensorAsync(sensor.Id, 1, cancellationToken);
+                    var latestLog = latestLogs.FirstOrDefault();
+                    if (latestLog != null)
                     {
-                        // Check for manual override session
-                        if (SimulationService.TryGetManualSession(sensor.Id, out var session))
-                        {
-                            var heatIndex = session.FixedHeatIndex;
-                            var result = simulationService.CreateAlertResult(sensor, heatIndex);
-                            
-                            await heatLogRepository.CreateAsync(new HeatLog
-                            {
-                                SensorId = sensor.Id,
-                                RecordedTemp = heatIndex,
-                                HeatIndex = heatIndex,
-                                RecordedAt = DateTime.UtcNow
-                            }, cancellationToken);
-
-                            batchResults.Add(result);
-
-                            SimulationService.DecrementManualSession(sensor.Id);
-                            if (session.RemainingCycles <= 1)
-                            {
-                                _logger.LogInformation("Manual session expired for sensor {Code}", sensor.SensorCode);
-                            }
-                        }
-                        else
-                        {
-                            // Normal simulation
-                            var heatIndex = simulationService.GenerateReading(sensor);
-                            var result = await alertService.ProcessHeatReadingAsync(sensor, heatIndex, cancellationToken);
-                            batchResults.Add(result);
-                        }
-
-                        _logger.LogDebug("[{Sensor}] {HeatIndex}°C in {Barangay}", 
-                            sensor.DisplayName, batchResults.Last().HeatIndex, sensor.Barangay);
+                        var result = simulationService.CreateAlertResult(sensor, latestLog.HeatIndex);
+                        batchResults.Add(result);
                     }
+                }
+                else
+                {
+                    // Internal sensors: Simulation logic
+                    if (SimulationService.TryGetManualSession(sensor.Id, out var session))
+                    {
+                        var heatIndex = session.FixedHeatIndex;
+                        var result = simulationService.CreateAlertResult(sensor, heatIndex);
+                        
+                        await heatLogRepository.CreateAsync(new HeatLog
+                        {
+                            SensorId = sensor.Id,
+                            RecordedTemp = heatIndex,
+                            HeatIndex = heatIndex,
+                            RecordedAt = DateTime.UtcNow
+                        }, cancellationToken);
+                        batchResults.Add(result);
+                        SimulationService.DecrementManualSession(sensor.Id);
+                        if (session.RemainingCycles <= 1)
+                        {
+                            _logger.LogInformation("Manual session expired for sensor {Code}", sensor.SensorCode);
+                        }
+                    }
+                    else
+                    {
+                        // Normal simulation
+                        var heatIndex = simulationService.GenerateReading(sensor);
+                        var result = await alertService.ProcessHeatReadingAsync(sensor, heatIndex, cancellationToken);
+                        batchResults.Add(result);
+                    }
+                }
 
+                if (batchResults.Any(r => r.SensorCode == sensor.SensorCode))
+                {
+                    _logger.LogDebug("[{Sensor}] {HeatIndex}°C in {Barangay}", 
+                        sensor.DisplayName, batchResults.Last(r => r.SensorCode == sensor.SensorCode).HeatIndex, sensor.Barangay);
+                }
+            }
+            
             await alertService.BroadcastHeartbeatSummaryAsync(batchResults, cancellationToken);
+
 
             // --- NEW: Cleanup old logs if we exceed the cap ---
             try
