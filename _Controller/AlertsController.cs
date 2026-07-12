@@ -152,7 +152,7 @@ namespace RefactorHeatAlertPostGre.Controllers
                 ? "WOKWI-VIRTUAL-01" 
                 : reading.SensorCode;
 
-            _logger.LogInformation($"Received from {sensorCode} - Temp: {reading.Temperature}°C, Hum: {reading.Humidity}%");
+            _logger.LogInformation($"Received from {sensorCode} - Temp: {reading.Temperature}°C");
 
             var sensor = await _sensorRepository.GetByCodeAsync(sensorCode);
             if (sensor == null)
