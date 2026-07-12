@@ -128,9 +128,8 @@ namespace RefactorHeatAlertPostGre.Services
                 sb.AppendLine($"📍 {spot.DisplayName} ({spot.BarangayName})");
                 sb.AppendLine();
             }
-
-            sb.AppendLine("📍 *Tap the button below for the live interactive radar.*");
             sb.AppendLine(" ✅ *Stay Hydrated, Avoid going out during peak heat hours.*");
+            sb.AppendLine("📍 *Tap the button below for the live interactive radar.*");
             
             return sb.ToString();
         }

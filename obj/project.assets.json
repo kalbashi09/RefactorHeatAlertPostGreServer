@@ -2730,11 +2730,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/home/john/JD Files/Programming /C# Projects/RefactorHeatAlertPostGre/RefactorHeatAlertPostGre.csproj",
+      "projectUniqueName": "/media/john/BackUPHDD/Programming/ToDefend/HeatAlert_HEATSYNC/RefactorHeatAlertPostGre/RefactorHeatAlertPostGre.csproj",
       "projectName": "RefactorHeatAlertPostGre",
-      "projectPath": "/home/john/JD Files/Programming /C# Projects/RefactorHeatAlertPostGre/RefactorHeatAlertPostGre.csproj",
+      "projectPath": "/media/john/BackUPHDD/Programming/ToDefend/HeatAlert_HEATSYNC/RefactorHeatAlertPostGre/RefactorHeatAlertPostGre.csproj",
       "packagesPath": "/home/john/.nuget/packages/",
-      "outputPath": "/home/john/JD Files/Programming /C# Projects/RefactorHeatAlertPostGre/obj/",
+      "outputPath": "/media/john/BackUPHDD/Programming/ToDefend/HeatAlert_HEATSYNC/RefactorHeatAlertPostGre/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "/home/john/.nuget/NuGet/NuGet.Config"
@@ -2821,7 +2821,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "/home/john/.dotnet/sdk/10.0.300/PortableRuntimeIdentifierGraph.json",
+        "runtimeIdentifierGraphPath": "/home/john/.dotnet/sdk/10.0.301/PortableRuntimeIdentifierGraph.json",
         "packagesToPrune": {
           "Microsoft.AspNetCore": "(,10.0.32767]",
           "Microsoft.AspNetCore.Antiforgery": "(,10.0.32767]",
@@ -3238,5 +3238,17 @@
         }
       }
     }
-  }
+  },
+  "logs": [
+    {
+      "code": "NU1903",
+      "level": "Warning",
+      "warningLevel": 1,
+      "message": "Package 'Microsoft.OpenApi' 2.4.1 has a known high severity vulnerability, https://github.com/advisories/GHSA-v5pm-xwqc-g5wc",
+      "libraryId": "Microsoft.OpenApi",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    }
+  ]
 }
