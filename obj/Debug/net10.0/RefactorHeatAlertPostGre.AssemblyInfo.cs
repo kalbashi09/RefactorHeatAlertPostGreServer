@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("RefactorHeatAlertPostGre")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7823b4f31db878b85a127ebe61955148010bbaed")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+146f7c1b22bf3fe1a5155301c368624f1628e796")]
 [assembly: System.Reflection.AssemblyProductAttribute("RefactorHeatAlertPostGre")]
 [assembly: System.Reflection.AssemblyTitleAttribute("RefactorHeatAlertPostGre")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
