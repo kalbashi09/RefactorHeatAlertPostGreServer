@@ -14,7 +14,7 @@ namespace RefactorHeatAlertPostGre.Data.Configurations
 
             builder.Property(e => e.AdminUID)
                 .HasColumnName("admin_uid")
-                .UseIdentityColumn();
+                .ValueGeneratedOnAdd();
 
             builder.Property(e => e.PersonnelId)
                 .HasColumnName("personnel_id")

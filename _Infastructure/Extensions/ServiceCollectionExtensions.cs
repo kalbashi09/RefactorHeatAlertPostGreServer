@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 using RefactorHeatAlertPostGre.Data;
 using RefactorHeatAlertPostGre.Data.Repositories;
 using RefactorHeatAlertPostGre.Infrastructure.BackgroundServices;
@@ -17,11 +16,7 @@ namespace Microsoft.Extensions.DependencyInjection
             string connectionString = GetConnectionString(configuration);
 
             services.AddDbContext<AppDbContext>(options =>
-                options.UseNpgsql(connectionString, npgsqlOptions =>
-                {
-                    npgsqlOptions.EnableRetryOnFailure(maxRetryCount: 3);
-                    npgsqlOptions.CommandTimeout(30);
-                }));
+                options.UseSqlite(connectionString));
 
             // Unit of Work & Repositories (Scoped)
             services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -65,45 +60,13 @@ namespace Microsoft.Extensions.DependencyInjection
 
         private static string GetConnectionString(IConfiguration configuration)
         {
-            // 1. Try Neon environment variable (standard on Render/Neon)
-            var neonUrl = Environment.GetEnvironmentVariable("NEON_DATABASE_URL")
-                          ?? Environment.GetEnvironmentVariable("DATABASE_URL");
-
-            if (!string.IsNullOrEmpty(neonUrl) && neonUrl.StartsWith("postgres"))
+            var connectionString = configuration.GetConnectionString("DefaultConnection");
+            if (string.IsNullOrEmpty(connectionString))
             {
-                Console.WriteLine("🌍 Using Neon PostgreSQL connection from environment.");
-                return ConvertPostgresUrlToConnString(neonUrl);
+                throw new InvalidOperationException("DefaultConnection string not found in appsettings.json.");
             }
-
-            // 2. Fallback to local appsettings.json
-            var localConn = configuration.GetConnectionString("DefaultConnection");
-            if (!string.IsNullOrEmpty(localConn))
-            {
-                Console.WriteLine("💻 Using local PostgreSQL from appsettings.json.");
-                return localConn;
-            }
-
-            throw new InvalidOperationException("No database connection string found.");
+            return connectionString;
         }
 
-        private static string ConvertPostgresUrlToConnString(string url)
-        {
-            var uri = new Uri(url);
-            var userInfo = uri.UserInfo.Split(':');
-
-            // Default PostgreSQL port if not specified
-            int port = uri.Port > 0 ? uri.Port : 5432;
-
-            return $"Host={uri.Host};" +
-                $"Port={port};" +
-                $"Username={userInfo[0]};" +
-                $"Password={userInfo[1]};" +
-                $"Database={uri.AbsolutePath.Trim('/')};" +
-                $"SSL Mode=Require;" +
-                $"Trust Server Certificate=true;" +
-                $"Pooling=true;" +
-                $"Maximum Pool Size=30;" +
-                $"Connection Idle Lifetime=300;";
-        }
     }
 }

@@ -14,7 +14,7 @@ namespace RefactorHeatAlertPostGre.Data.Configurations
 
             builder.Property(e => e.Id)
                 .HasColumnName("id")
-                .UseIdentityColumn();
+                .ValueGeneratedOnAdd();
 
             builder.Property(e => e.SensorId)
                 .HasColumnName("sensor_id")

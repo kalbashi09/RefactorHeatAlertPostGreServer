@@ -21,11 +21,7 @@ namespace RefactorHeatAlertPostGre.Data
 
             // Configure DbContext options
             var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
-            optionsBuilder.UseNpgsql(connectionString, npgsqlOptions =>
-            {
-                npgsqlOptions.EnableRetryOnFailure(maxRetryCount: 3);
-                npgsqlOptions.CommandTimeout(30);
-            });
+            optionsBuilder.UseSqlite(connectionString);
 
             return new AppDbContext(optionsBuilder.Options);
         }

@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "/media/john/BackUPHDD/Programming/ToDefend/HeatAlert_HEATSYNC/RefactorHeatAlertPostGre/RefactorHeatAlertPostGre.csproj": {}
+    "/media/john/BackUPHDD/Programming/ToDefend/HeatAlert_HEATSYNC/RefactorHeatAlertSqlite/RefactorHeatAlertPostGre.csproj": {}
   },
   "projects": {
-    "/media/john/BackUPHDD/Programming/ToDefend/HeatAlert_HEATSYNC/RefactorHeatAlertPostGre/RefactorHeatAlertPostGre.csproj": {
+    "/media/john/BackUPHDD/Programming/ToDefend/HeatAlert_HEATSYNC/RefactorHeatAlertSqlite/RefactorHeatAlertPostGre.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/media/john/BackUPHDD/Programming/ToDefend/HeatAlert_HEATSYNC/RefactorHeatAlertPostGre/RefactorHeatAlertPostGre.csproj",
+        "projectUniqueName": "/media/john/BackUPHDD/Programming/ToDefend/HeatAlert_HEATSYNC/RefactorHeatAlertSqlite/RefactorHeatAlertPostGre.csproj",
         "projectName": "RefactorHeatAlertPostGre",
-        "projectPath": "/media/john/BackUPHDD/Programming/ToDefend/HeatAlert_HEATSYNC/RefactorHeatAlertPostGre/RefactorHeatAlertPostGre.csproj",
+        "projectPath": "/media/john/BackUPHDD/Programming/ToDefend/HeatAlert_HEATSYNC/RefactorHeatAlertSqlite/RefactorHeatAlertPostGre.csproj",
         "packagesPath": "/home/john/.nuget/packages/",
-        "outputPath": "/media/john/BackUPHDD/Programming/ToDefend/HeatAlert_HEATSYNC/RefactorHeatAlertPostGre/obj/",
+        "outputPath": "/media/john/BackUPHDD/Programming/ToDefend/HeatAlert_HEATSYNC/RefactorHeatAlertSqlite/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/home/john/.nuget/NuGet/NuGet.Config"
@@ -56,15 +56,15 @@
               "target": "Package",
               "version": "[10.0.6, )"
             },
+            "Microsoft.EntityFrameworkCore.Sqlite": {
+              "target": "Package",
+              "version": "[10.0.10, )"
+            },
             "Microsoft.EntityFrameworkCore.Tools": {
               "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
               "suppressParent": "All",
               "target": "Package",
               "version": "[10.0.6, )"
-            },
-            "Npgsql.EntityFrameworkCore.PostgreSQL": {
-              "target": "Package",
-              "version": "[10.0.1, )"
             },
             "Swashbuckle.AspNetCore": {
               "target": "Package",

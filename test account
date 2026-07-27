@@ -1,0 +1,13 @@
+INSERT INTO public.auth_personnel 
+    (personnel_id, passcode_hash, full_name, is_active, created_at)
+VALUES 
+    ('ADMIN001', 
+     '$2a$11$4FX8L6VjaMqXvipq1ohhveGkoxxPLtO9dI1z7Irtxrbpbnc0XzXWq', 
+     'Administrator', 
+     TRUE, 
+     NOW())
+ON CONFLICT (personnel_id) 
+DO UPDATE SET 
+    passcode_hash = EXCLUDED.passcode_hash,
+    full_name = EXCLUDED.full_name,
+    is_active = TRUE;
